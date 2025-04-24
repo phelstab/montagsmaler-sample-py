@@ -72,52 +72,63 @@ class PictionaryServer:
         try:
             data = client_socket.recv(4096)
             if data:
-                message = decode_message(data)
-                msg_type = message["type"]
-                msg_data = message["data"]
-                
-                if msg_type == MSG_DRAW and self.clients[client_socket].get("is_drawer", False):
-                    # Forward drawing data to all clients
-                    self.drawing_data.append(msg_data)
-                    self.broadcast(encode_message(MSG_DRAW, msg_data), exclude=None)
-                
-                elif msg_type == MSG_CLEAR and self.clients[client_socket].get("is_drawer", False):
-                    # Clear canvas for all clients
-                    self.drawing_data = []
-                    self.broadcast(encode_message(MSG_CLEAR, {}), exclude=None)
-                
-                elif msg_type == MSG_GUESS and not self.clients[client_socket].get("is_drawer", False):
-                    # Handle word guess
-                    guess = msg_data["guess"].lower().strip()
-                    player_name = self.clients[client_socket]["name"]
-                    
-                    # Broadcast the guess to all clients
-                    self.broadcast(encode_message(MSG_GUESS, {
-                        "player": player_name, 
-                        "guess": guess
-                    }), exclude=None)
-                    
-                    # Check if guess is correct
-                    if self.game_state == STATE_PLAYING and guess == self.current_word:
-                        # Award points to guesser
-                        self.clients[client_socket]["score"] += 10
+                # Split received data by newline and process each message
+                messages = data.decode('utf-8').split('\n')
+                for message_str in messages:
+                    if not message_str.strip():
+                        continue  # Skip empty strings
                         
-                        # Award points to drawer
-                        if self.drawer in self.clients:
-                            self.clients[self.drawer]["score"] += 5
+                    try:
+                        message = json.loads(message_str)
+                        msg_type = message["type"]
+                        msg_data = message["data"]
                         
-                        # End round
-                        self.game_state = STATE_ROUND_END
-                        self.broadcast(encode_message(MSG_RESULT, {
-                            "winner": player_name,
-                            "word": self.current_word
-                        }))
+                        if msg_type == MSG_DRAW and self.clients[client_socket].get("is_drawer", False):
+                            # Forward drawing data to all clients
+                            self.drawing_data.append(msg_data)
+                            self.broadcast(encode_message(MSG_DRAW, msg_data), exclude=None)
                         
-                        # Broadcast updated game state
-                        self.broadcast_game_state()
+                        elif msg_type == MSG_CLEAR and self.clients[client_socket].get("is_drawer", False):
+                            # Clear canvas for all clients
+                            self.drawing_data = []
+                            self.broadcast(encode_message(MSG_CLEAR, {}), exclude=None)
                         
-                        # Start new round after a delay
-                        threading.Timer(3, self.start_new_round).start()
+                        elif msg_type == MSG_GUESS and not self.clients[client_socket].get("is_drawer", False):
+                            # Handle word guess
+                            guess = msg_data["guess"].lower().strip()
+                            player_name = self.clients[client_socket]["name"]
+                            
+                            # Broadcast the guess to all clients
+                            self.broadcast(encode_message(MSG_GUESS, {
+                                "player": player_name, 
+                                "guess": guess
+                            }), exclude=None)
+                            
+                            # Check if guess is correct
+                            if self.game_state == STATE_PLAYING and guess == self.current_word:
+                                # Award points to guesser
+                                self.clients[client_socket]["score"] += 10
+                                
+                                # Award points to drawer
+                                if self.drawer in self.clients:
+                                    self.clients[self.drawer]["score"] += 5
+                                
+                                # End round
+                                self.game_state = STATE_ROUND_END
+                                self.broadcast(encode_message(MSG_RESULT, {
+                                    "winner": player_name,
+                                    "word": self.current_word
+                                }))
+                                
+                                # Broadcast updated game state
+                                self.broadcast_game_state()
+                                
+                                # Start new round after a delay
+                                threading.Timer(3, self.start_new_round).start()
+                    except json.JSONDecodeError as json_err:
+                        print(f"Error decoding JSON: {json_err} - Raw data: {message_str[:50]}...")
+                    except Exception as msg_err:
+                        print(f"Error processing message: {msg_err}")
             else:
                 # Empty data means client disconnected
                 self.handle_disconnect(client_socket)

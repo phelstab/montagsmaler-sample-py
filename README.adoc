@@ -1,1 +1,172 @@
-:7
+= Pictionary Game
+:toc:
+:toc-title: Table of Contents
+:toclevels: 3
+:imagesdir: image
+
+== Introduction
+
+Pictionary is a classic drawing and guessing game where one player draws a picture based on a randomly selected word, and other players try to guess what the word is. This implementation provides a networked multiplayer version with a simple graphical interface.
+
+This entire project was written with Sourcegraph Cody (Claude 3.7 Sonnet extended thinking), including this README. The implementation consists of a client-server architecture where multiple players can connect to a central server to play together.
+
+image::gui.png[Two clients playing Pictionary]
+
+== Game Architecture
+
+=== Components
+
+The project is organized into three main components:
+
+* *Client* (`client/client.py`): The GUI application that players interact with
+* *Server* (`server/server.py`): The central game server that coordinates gameplay
+* *Shared* (`shared/common.py`): Common utilities and constants used by both client and server
+
+=== Game Flow
+
+[plantuml]
+....
+@startuml
+[*] --> Waiting : Server started
+Waiting --> Countdown : MIN_PLAYERS connected
+Countdown --> Playing : Countdown finished
+Playing --> RoundEnd : Word guessed correctly
+Playing --> RoundEnd : Time limit reached
+RoundEnd --> Playing : Start new round
+Playing --> Waiting : Too few players
+RoundEnd --> Waiting : Too few players
+@enduml
+....
+
+=== States
+
+* *Waiting*: The server is waiting for enough players to join
+* *Countdown*: A countdown before the game begins
+* *Playing*: Active gameplay with one player drawing and others guessing
+* *RoundEnd*: Brief period between rounds to show results
+
+== Features
+
+* Real-time drawing synchronized across all clients
+* Chat functionality for guessing words
+* Automatic role assignment (drawer/guesser)
+* Score tracking for correct guesses
+* Clear canvas functionality for the drawer
+* Automatic handling of player disconnections
+* Round-based gameplay with new words and drawers each round
+
+== Setup and Installation
+
+=== Requirements
+
+* Python 3.6 or higher
+* Tkinter (usually included with Python)
+
+=== Installation
+
+* Clone & setup the repository:
+
+```bash
+git clone https://github.com/phelstab/montagsmaler-sample-py.git
+cd montagsmaler-sample-py
+python -m venv venv
+.\venv\Scripts\activate
+```
+
+=== Running the Game
+
+* Start the server:
+
+```sh
+python -m server.server
+```
+
+* In a separate terminal window, start a client:
+
+```bash
+.\venv\Scripts\activate
+python -m client.client
+```
+
+* Repeat step 2 in another terminal window to start a second client
+
+* To play, wait for the countdown to start when at least 2 players have connected. The designated drawer will see a word to draw, and other players will try to guess it.
+
+
+== How to Play
+
+1. *As a Drawer*:
+   * You'll be shown a word at the top of the screen
+   * Use your mouse to draw that word on the canvas
+   * The "Clear Canvas" button lets you erase your drawing and start over
+
+2. *As a Guesser*:
+   * Watch the drawing as it appears in real-time
+   * Type your guesses in the text field at the bottom
+   * Press Enter or click "Submit Guess" to send your guess
+   * The first player to guess correctly wins the round
+
+3. *Scoring*:
+   * Guessers get 10 points for a correct guess
+   * The drawer gets 5 points when someone correctly guesses their drawing
+
+== Technical Details
+
+=== Network Protocol
+
+The client and server communicate using a simple JSON-based protocol over TCP sockets. Each message has a type and a data payload, separated by newlines to delimit messages.
+
+=== Message Types
+
+* `JOIN`: New player joining
+* `DRAW`: Drawing data
+* `CLEAR`: Clear canvas command
+* `GUESS`: Player guess
+* `STATE`: Game state update
+* `COUNTDOWN`: Countdown timer update
+* `RESULT`: Round result
+
+=== Client Architecture
+
+The client is built using Tkinter for the GUI with these main components:
+
+* Drawing canvas
+* Chat/guess display
+* Player list
+* Status indicators
+* Input field for guesses
+
+=== Server Architecture
+
+The server manages:
+* Client connections
+* Game state
+* Word selection
+* Drawing synchronization
+* Guess validation
+* Score tracking
+
+== Configuration
+
+Game settings can be modified in `shared/common.py`:
+
+* `HOST`: Server hostname (default: "localhost")
+* `PORT`: Server port (default: 5555)
+* `COUNTDOWN_SECONDS`: Time before a round starts (default: 5)
+* `MIN_PLAYERS`: Minimum players required (default: 2)
+* `WORDS`: List of words that can be selected for drawing
+
+== Troubleshooting
+
+* If the server won't start, check if the port is already in use
+* If clients can't connect, verify the HOST setting in common.py
+* If the GUI doesn't appear, ensure Tkinter is properly installed
+
+== Potential Improvements
+
+* Add a timer for each round
+* Implement more sophisticated scoring based on guess time
+* Add support for different colors and brush sizes
+* Create a word category system
+* Add sound effects and music
+* Implement a proper login system

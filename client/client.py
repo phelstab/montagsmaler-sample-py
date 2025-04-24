@@ -37,76 +37,77 @@ class PictionaryClient:
         self.connect_to_server()
     
     def setup_ui(self):
-        """Create the user interface"""
-        # Main frame
-        self.main_frame = tk.Frame(self.master)
-        self.main_frame.pack(padx=10, pady=10)
+        """Create the user interface to match the C# app layout"""
+        # Configure window size
+        self.master.geometry("800x800")
         
-        # Status label
-        self.status_label = tk.Label(self.main_frame, text="Connecting to server...", 
-                                     font=("Arial", 12))
-        self.status_label.pack(pady=5)
+        # Top row - Game status and connection info
+        self.top_frame = tk.Frame(self.master, padx=10, pady=10)
+        self.top_frame.pack(fill=tk.X)
         
-        # Canvas (whiteboard)
-        self.canvas_frame = tk.Frame(self.main_frame, bd=2, relief=tk.SUNKEN)
-        self.canvas_frame.pack(pady=10)
+        self.status_frame = tk.Frame(self.top_frame)
+        self.status_frame.pack(fill=tk.X)
         
-        self.canvas = tk.Canvas(self.canvas_frame, width=CANVAS_SIZE, height=CANVAS_SIZE, 
-                               bg="white", cursor="pencil")
-        self.canvas.pack()
+        self.status_label = tk.Label(self.status_frame, text="Game Status: Connecting to server...", 
+                                font=("Arial", 16, "bold"))
+        self.status_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
+        self.word_label = tk.Label(self.top_frame, text="", font=("Arial", 12))
+        self.word_label.pack(anchor=tk.W, pady=5)
+        
+        # Middle row - Whiteboard and Players list
+        self.middle_frame = tk.Frame(self.master, padx=10, pady=10)
+        self.middle_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Whiteboard canvas (left side)
+        self.canvas_frame = tk.Frame(self.middle_frame, bd=1, relief=tk.SOLID)
+        self.canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        self.canvas = tk.Canvas(self.canvas_frame, bg="white", cursor="pencil")
+        self.canvas.pack(fill=tk.BOTH, expand=True)
         
         # Canvas bindings for drawing
         self.canvas.bind("<Button-1>", self.start_draw)
         self.canvas.bind("<B1-Motion>", self.draw)
         self.canvas.bind("<ButtonRelease-1>", self.stop_draw)
         
-        # Player info frame
-        self.players_frame = tk.Frame(self.main_frame)
-        self.players_frame.pack(fill=tk.X, pady=5)
+        # Players list and controls (right side)
+        self.sidebar_frame = tk.Frame(self.middle_frame, width=200, padx=10)
+        self.sidebar_frame.pack(side=tk.RIGHT, fill=tk.Y)
         
-        self.players_label = tk.Label(self.players_frame, text="Players: ", font=("Arial", 10))
-        self.players_label.pack(anchor=tk.W)
+        tk.Label(self.sidebar_frame, text="Players:", font=("Arial", 10, "bold")).pack(anchor=tk.W, pady=(0, 5))
         
-        # Controls frame
-        self.controls_frame = tk.Frame(self.main_frame)
-        self.controls_frame.pack(fill=tk.X, pady=5)
+        # Players listbox
+        self.players_listbox = tk.Listbox(self.sidebar_frame, height=10, width=25)
+        self.players_listbox.pack(fill=tk.X, pady=5)
         
         # Clear button (only for drawer)
-        self.clear_button = tk.Button(self.controls_frame, text="Clear Canvas", 
-                                     command=self.clear_canvas)
-        self.clear_button.pack(side=tk.LEFT, padx=5)
+        self.clear_button = tk.Button(self.sidebar_frame, text="Clear Canvas", 
+                                    command=self.clear_canvas)
+        self.clear_button.pack(fill=tk.X, pady=10)
         self.clear_button["state"] = tk.DISABLED
         
-        # Guessing frame
-        self.guess_frame = tk.Frame(self.main_frame)
-        self.guess_frame.pack(fill=tk.X, pady=5)
+        # Chat display
+        tk.Label(self.sidebar_frame, text="Chat:", font=("Arial", 10, "bold")).pack(anchor=tk.W, pady=(10, 5))
+        self.chat_display = tk.Text(self.sidebar_frame, width=25, height=12, state=tk.DISABLED)
+        self.chat_display.pack(fill=tk.BOTH, expand=True)
         
-        self.guess_label = tk.Label(self.guess_frame, text="Your guess: ", font=("Arial", 10))
-        self.guess_label.pack(side=tk.LEFT)
+        # Bottom row - Guessing input
+        self.bottom_frame = tk.Frame(self.master, padx=10, pady=10)
+        self.bottom_frame.pack(fill=tk.X, side=tk.BOTTOM)
         
-        self.guess_entry = tk.Entry(self.guess_frame, width=30)
-        self.guess_entry.pack(side=tk.LEFT, padx=5)
+        # Add a label for the guess entry
+        self.guess_label = tk.Label(self.bottom_frame, text="Enter your guess:", font=("Arial", 10))
+        self.guess_label.pack(side=tk.LEFT, padx=(0, 5))
+        
+        # Guess entry and button
+        self.guess_entry = tk.Entry(self.bottom_frame)
+        self.guess_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
         self.guess_entry.bind("<Return>", self.send_guess)
         
-        self.guess_button = tk.Button(self.guess_frame, text="Guess", command=self.send_guess)
-        self.guess_button.pack(side=tk.LEFT)
-        
-        # Word display (for drawer)
-        self.word_frame = tk.Frame(self.main_frame)
-        self.word_frame.pack(fill=tk.X, pady=5)
-        
-        self.word_label = tk.Label(self.word_frame, text="", font=("Arial", 12, "bold"))
-        self.word_label.pack()
-        
-        # Chat frame - displays guesses
-        self.chat_frame = tk.Frame(self.main_frame)
-        self.chat_frame.pack(fill=tk.BOTH, expand=True, pady=5)
-        
-        self.chat_label = tk.Label(self.chat_frame, text="Chat:", font=("Arial", 10))
-        self.chat_label.pack(anchor=tk.W)
-        
-        self.chat_display = tk.Text(self.chat_frame, width=50, height=10, state=tk.DISABLED)
-        self.chat_display.pack(fill=tk.BOTH, expand=True)
+        self.guess_button = tk.Button(self.bottom_frame, text="Submit Guess", 
+                                    width=15, command=self.send_guess)
+        self.guess_button.pack(side=tk.RIGHT)
         
         # Update UI based on initial state
         self.update_controls()
@@ -182,17 +183,17 @@ class PictionaryClient:
             
             # Update status message
             if self.game_state == STATE_WAITING:
-                self.status_label.config(text="Waiting for players...")
+                self.status_label.config(text="Game Status: Waiting for players...")
             elif self.game_state == STATE_COUNTDOWN:
-                self.status_label.config(text="Game starting soon...")
+                self.status_label.config(text="Game Status: Game is starting...")
             elif self.game_state == STATE_PLAYING:
                 if self.is_drawer:
-                    self.status_label.config(text="You are drawing!")
+                    self.status_label.config(text="Game Status: Your turn to draw!")
                 else:
-                    self.status_label.config(text="Guess the word!")
+                    self.status_label.config(text="Game Status: Guess the word!")
             elif self.game_state == STATE_ROUND_END:
-                self.status_label.config(text="Round ended")
-        
+                self.status_label.config(text="Game Status: Round ended!")
+                
         elif msg_type == MSG_DRAW:
             # Draw on canvas
             if not self.is_drawer:  # Only process draw messages if we're not the drawer
@@ -232,8 +233,9 @@ class PictionaryClient:
                     self.add_to_chat(f"*** Round ended: {error} ***")
     
     def update_players_display(self):
-        """Update the display of player information"""
-        player_text = "Players: "
+        """Update the players listbox"""
+        self.players_listbox.delete(0, tk.END)
+        
         for player in self.players:
             name = player["name"]
             score = player["score"]
@@ -243,13 +245,7 @@ class PictionaryClient:
             if is_drawer:
                 player_info += " (Drawing)"
             
-            player_text += player_info + ", "
-        
-        # Remove trailing comma and space
-        if player_text.endswith(", "):
-            player_text = player_text[:-2]
-            
-        self.players_label.config(text=player_text)
+            self.players_listbox.insert(tk.END, player_info)
     
     def update_controls(self):
         """Update control states based on game state and player role"""
